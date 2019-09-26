@@ -113,18 +113,23 @@ class AuthorizeEndpoint(object):
 
         # Nonce parameter validation.
         if self.is_authentication and self.grant_type == 'implicit' and not self.params['nonce']:
-            raise AuthorizeError(self.params['redirect_uri'], 'invalid_request', self.grant_type)
+            description = 'Implicit grant type, but no nonce in request parameters.'
+            raise AuthorizeError(self.params['redirect_uri'], 'invalid_request', self.grant_type, description)
 
         # Response type parameter validation.
         if self.is_authentication \
                 and self.params['response_type'] not in self.client.response_type_values():
-            raise AuthorizeError(self.params['redirect_uri'], 'invalid_request', self.grant_type)
+            description = "response_type {!r} not permissible for client (must be one of {!r})".format(
+                self.params['response_type'], sorted(self.client.response_type_values()))
+            raise AuthorizeError(self.params['redirect_uri'], 'invalid_request', self.grant_type, description)
 
         # PKCE validation of the transformation method.
         if self.params['code_challenge']:
             if not (self.params['code_challenge_method'] in ['plain', 'S256']):
                 raise AuthorizeError(
-                    self.params['redirect_uri'], 'invalid_request', self.grant_type)
+                    self.params['redirect_uri'], 'invalid_request', self.grant_type,
+                    description="code_challenge_method ({!r}) must be either 'plain' or 'S256'".format(
+                        self.params['code_challenge_method']))
 
     def create_response_uri(self):
         uri = urlsplit(self.params['redirect_uri'])

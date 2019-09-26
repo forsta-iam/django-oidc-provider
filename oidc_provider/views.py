@@ -162,11 +162,7 @@ class AuthorizeView(View):
             return render(request, OIDC_TEMPLATES['error'], context)
 
         except AuthorizeError as error:
-            uri = error.create_uri(
-                authorize.params['redirect_uri'],
-                authorize.params['state'])
-
-            return redirect(uri)
+            return self.handle_authorize_error(authorize, error)
 
     def post(self, request, *args, **kwargs):
         authorize = self.authorize_endpoint_class(request)
@@ -195,11 +191,25 @@ class AuthorizeView(View):
             return redirect(uri)
 
         except AuthorizeError as error:
-            uri = error.create_uri(
-                authorize.params['redirect_uri'],
-                authorize.params['state'])
+            return self.handle_authorize_error(authorize, error)
 
-            return redirect(uri)
+    def handle_authorize_error(self, authorize, error):
+        logger.info(
+            "Authorize error: client %r, error %r, grant_type %r, response_type %r, scope %r, prompt %r, description %r",
+            authorize.client.client_id,
+            error.error,
+            authorize.grant_type,
+            authorize.params.get('response_type'),
+            authorize.params.get('scope'),
+            authorize.params.get('prompt'),
+            error.description,
+            exc_info=1
+        )
+        uri = error.create_uri(
+            authorize.params['redirect_uri'],
+            authorize.params['state'])
+
+        return redirect(uri)
 
 
 class TokenView(View):
